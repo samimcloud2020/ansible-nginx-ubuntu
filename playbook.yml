@@ -54,7 +54,7 @@
       csr_path: /etc/ssl/csr/www.ansible.com.csr
       provider: selfsigned
       
-  - name: "install nginx"
+   - name: "install nginx"
     apt:
       name: ['nginx']
       state: latest
@@ -81,7 +81,24 @@
       group: root
       mode: '0644'
     notify: restart nginx
-
+  - name: copy 1
+    copy:
+      src: /files/self-signed.conf
+      dest: /etc/nginx/snippets/self-signed.conf
+      owner: root
+      group: root
+      mode: 0644
+    notify: restart nginx
+ 
+  - name: copy 2
+    copy:
+      src: /files/ssl-params.conf
+      dest: /etc/nginx/snippets/ssl-params.conf
+      owner: root
+      group: root
+      mode: 0644      
+    notify: restart nginx
+    
   - name: "sync website"
     synchronize:
       src: site/
