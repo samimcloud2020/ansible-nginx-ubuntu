@@ -20,7 +20,40 @@
       rule: allow
       port: '80'
       proto: tcp    
-
+  - name: Install openssl
+    package:
+      name: “{{ item }}”
+      state: latest
+    with_items:
+      - openssl
+      - python-openssl
+ 
+  - name: Generate an OpenSSL private key
+    openssl_privatekey:
+      path: /etc/ssl/private/ansible.com.pem
+ 
+  - name: Create directory
+    file:
+      path: /etc/ssl/csr
+      state: directory
+      mode: 0755
+ 
+  - name: Generate an OpenSSL Certificate Signing Request
+    openssl_csr:
+      path: /etc/ssl/csr/www.ansible.com.csr
+      privatekey_path: /etc/ssl/private/ansible.com.pem
+      country_name: IN
+      organization_name: Ansible
+      email_address: author@shakthimaan.com
+      common_name: www.ansible.com
+ 
+  - name: Generate a self signed certificate
+    openssl_certificate:
+      path: /etc/ssl/certs/nginx-selfsigned.crt
+      privatekey_path: /etc/ssl/private/ansible.com.pem
+      csr_path: /etc/ssl/csr/www.ansible.com.csr
+      provider: selfsigned
+      
   - name: "install nginx"
     apt:
       name: ['nginx']
