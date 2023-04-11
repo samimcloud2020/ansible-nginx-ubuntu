@@ -2,7 +2,7 @@
   hosts: localhost
   become: yes
   vars:
-    domain: samim.trycloud.co.in
+    domain: jenkins.trycloud.co.in
     ansible_user: root  
   tasks:
   - name: "apt-get update"
