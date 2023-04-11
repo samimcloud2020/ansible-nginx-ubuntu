@@ -1,0 +1,144 @@
+- name: web for nginx deploy on ubuntu
+  hosts: localhost
+  become: yes
+  vars:
+    domain: jenkins.trycloud.co.in
+    ansible_user: root  
+    acme_challenge_type: http-01
+    acme_directory: https://acme-v02.api.letsencrypt.org/directory
+    acme_version: 2
+    acme_email: certificate-reminders@jenkins.trycloud.co.in
+    letsencrypt_dir: /etc/letsencrypt
+    letsencrypt_keys_dir: /etc/letsencrypt/keys
+    letsencrypt_csrs_dir: /etc/letsencrypt/csrs
+    letsencrypt_certs_dir: /etc/letsencrypt/certs
+    letsencrypt_account_key: /etc/letsencrypt/account/account.key
+    domain_name: jenkins.trycloud.co.in
+  tasks:
+  - name: "apt-get update"
+    apt:
+      update_cache: yes
+      cache_valid_time: 3600
+  - name: Ensure some basic tools are installed.
+    ansible.builtin.apt:
+      name: aptitude,vim,ntp,ca-certificates,htop,rsync,open-vm-tools,gpg,sudo,iproute2,iptables,git,libnss-libvirt
+      state: latest   
+  - name: Allow all access to tcp port 80
+    ufw:
+      rule: allow
+      port: '80'
+      proto: tcp    
+    
+  - name: "install nginx"
+    apt:
+      name: ['nginx']
+      state: latest
+
+  - name: "create www directory"
+    file:
+      path: /var/www/{{ domain }}/html
+      state: directory
+      mode: '0775'
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+
+  - name: delete default nginx site
+    file:
+      path: /etc/nginx/sites-enabled/default
+      state: absent
+    notify: restart nginx
+
+  - name: copy nginx site.conf
+    template:
+      src: site.conf.j2
+      dest: /etc/nginx/sites-enabled/{{ domain }}
+      owner: root
+      group: root
+      mode: '0644'
+    notify: restart nginx
+  - name: "Create required directories in /etc/letsencrypt"
+    file:
+      path: "/etc/letsencrypt/{{ item }}"
+      state: directory
+      owner: root
+      group: root
+      mode: u=rwx,g=x,o=x
+    with_items:
+      - account
+      - certs
+      - csrs
+      - keys
+  - name: "Generate a Let's Encrypt account key"
+    shell: "if [ ! -f {{ letsencrypt_account_key }} ]; then openssl genrsa 4096 | sudo tee {{ letsencrypt_account_key }}; fi"      
+  - name: "Generate Let's Encrypt private key"
+    shell: "openssl genrsa 4096 | sudo tee /etc/letsencrypt/keys/{{ domain }}.key"
+  - name: "Generate Let's Encrypt CSR"
+    shell: "openssl req -new -sha256 -key /etc/letsencrypt/keys/{{ domain }}.key -subj \"/CN={{ domain }}\" -reqexts SAN -config <(cat /etc/ssl/openssl.cnf <(printf \"\n[SAN]\nsubjectAltName=DNS:{{ domain }},DNS:www.{{ domain }}\")) | sudo tee /etc/letsencrypt/csrs/{{ domain }}.csr"
+    args:
+      executable: /bin/bash    
+  
+  - name: 'Begin Let  Encrypt challenges'
+    acme_certificate:
+      acme_directory: "{{ acme_directory }}"
+      acme_version: "{{ acme_version }}"
+      account_key_src: "{{ letsencrypt_account_key }}"
+      account_email: "{{ acme_email }}"
+      terms_agreed: 1
+      challenge: "{{ acme_challenge_type }}"
+      csr: "{{ letsencrypt_csrs_dir }}/{{ domain }}.csr"
+      dest: "{{ letsencrypt_certs_dir }}/{{ domain }}.crt"
+      fullchain_dest: "{{ letsencrypt_certs_dir }}/fullchain_{{ domain }}.crt"
+      remaining_days: 91
+    register: acme
+  - name: "Create .well-known/acme-challenge directory"
+    file:
+      path: /var/www/html/.well-known/acme-challenge
+      state: directory
+      owner: root
+      group: root
+      mode: u=rwx,g=rx,o=rx
+
+  - name: "Implement http-01 challenge files"
+    copy:
+      content: "{{ acme['challenge_data'][item]['http-01']['resource_value'] }}"
+      dest: "/var/www/html/{{ acme['challenge_data'][item]['http-01']['resource'] }}"
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+    with_items:
+      - "(( domain }}"
+      - "www.{{ domain }} "  
+    failed_when: "'error' in acme.stderr"    
+  - name: "error"
+    debug:
+      msg: "{{ acme.stderr }}"
+    
+
+  - name: 'Complete Let  Encrypt challenges'
+    acme_certificate:
+      acme_directory: "{{ acme_directory }}"
+      acme_version: "{{ acme_version }}"
+      account_key_src: "{{ letsencrypt_account_key }}"
+      account_email: "{{ acme_email }}"
+      challenge: "{{ acme_challenge_type }}"
+      csr: "{{ letsencrypt_csrs_dir }}/{{ domain }}.csr"
+      dest: "{{ letsencrypt_certs_dir }}/{{ domain }}.crt"
+      chain_dest: "{{ letsencrypt_certs_dir }}/chain_{{ domain }}.crt"
+      fullchain_dest: "{{ letsencrypt_certs_dir }}/fullchain_{{ domain }}"
+      data: "{{ acme }}"    
+  
+  - name: "sync website"
+    synchronize:
+      src: site/
+      dest: /var/www/{{ domain }}/html
+      archive: no
+      checksum: yes
+      recursive: yes
+      delete: yes
+    become: no    
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
