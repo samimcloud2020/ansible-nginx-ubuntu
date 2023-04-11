@@ -9,6 +9,13 @@ After using any of the above commands, use this in order to remove dependencies 
 
 sudo apt-get autoremove
 ----------------------------------------------------------------
+Note: The letsencrypt module has been renamed to acme_certificate as of Ansible 2.6.
+The letsencrypt name is now an alias of acme_certificate, so will still work, 
+but you way wish to use acme_certificate instead, to ensure future-proofness of your playbooks. 
+You can check your Ansible version using ansible --version. As of the writing of this tutorial, 
+the Ubuntu 18.04 Apt repositories don’t support acme_certificate yet.
+
+--------------------------------------------------------------------
 Deploying certificate
 Successfully deployed certificate for jenkins.trycloud.co.in to /etc/nginx/sites-enabled/jenkins.trycloud.co.in
 Successfully deployed certificate for www.jenkins.trycloud.co.in to /etc/nginx/sites-enabled/jenkins.trycloud.co.in
