@@ -2,66 +2,28 @@
   hosts: localhost
   become: yes
   vars:
-    domain: letmovecloud.com
+    domain: samim.trycloud.co.in
     ansible_user: root  
   tasks:
   - name: "apt-get update"
     apt:
       update_cache: yes
       cache_valid_time: 3600
-      
-  - name: Allow everything and enable UFW
-    ufw:
-      state: enabled
-      policy: allow    
-    
+     
   - name: Allow all access to tcp port 80
     ufw:
       rule: allow
       port: '80'
       proto: tcp    
-  - name: Install openssl
-    package:
-      name: “{{ item }}”
-      state: latest
-    with_items:
-      - openssl
-      - python-openssl
- 
-  - name: Generate an OpenSSL private key
-    openssl_privatekey:
-      path: /etc/ssl/private/ansible.com.pem
- 
-  - name: Create directory
-    file:
-      path: /etc/ssl/csr
-      state: directory
-      mode: 0755
- 
-  - name: Generate an OpenSSL Certificate Signing Request
-    openssl_csr:
-      path: /etc/ssl/csr/www.ansible.com.csr
-      privatekey_path: /etc/ssl/private/ansible.com.pem
-      country_name: IN
-      organization_name: Ansible
-      email_address: author@shakthimaan.com
-      common_name: www.ansible.com
- 
-  - name: Generate a self signed certificate
-    openssl_certificate:
-      path: /etc/ssl/certs/nginx-selfsigned.crt
-      privatekey_path: /etc/ssl/private/ansible.com.pem
-      csr_path: /etc/ssl/csr/www.ansible.com.csr
-      provider: selfsigned
-      
-   - name: "install nginx"
+    
+  - name: "install nginx"
     apt:
       name: ['nginx']
       state: latest
 
   - name: "create www directory"
     file:
-      path: /var/www/{{ domain }}
+      path: /var/www/{{ domain }}/html
       state: directory
       mode: '0775'
       owner: "{{ ansible_user }}"
@@ -81,28 +43,12 @@
       group: root
       mode: '0644'
     notify: restart nginx
-  - name: copy 1
-    copy:
-      src: /files/self-signed.conf
-      dest: /etc/nginx/snippets/self-signed.conf
-      owner: root
-      group: root
-      mode: 0644
-    notify: restart nginx
- 
-  - name: copy 2
-    copy:
-      src: /files/ssl-params.conf
-      dest: /etc/nginx/snippets/ssl-params.conf
-      owner: root
-      group: root
-      mode: 0644      
-    notify: restart nginx
     
+  
   - name: "sync website"
     synchronize:
       src: site/
-      dest: /var/www/{{ domain }}
+      dest: /var/www/{{ domain }}/html
       archive: no
       checksum: yes
       recursive: yes
