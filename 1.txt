@@ -4,14 +4,9 @@ Successfully deployed certificate for www.jenkins.trycloud.co.in to /etc/nginx/s
 Congratulations! You have successfully enabled HTTPS on https://jenkins.trycloud.co.in and https://www.jenkins.trycloud.co.in
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-If you like Certbot, please consider supporting our work by:
- * Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
- * Donating to EFF:                    https://eff.org/donate-le
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-root@ip-172-31-94-216:~/ansible-nginx-ubuntu# cd /etc/nginx/sites-enabled/
-root@ip-172-31-94-216:/etc/nginx/sites-enabled# ls
-jenkins.trycloud.co.in
-root@ip-172-31-94-216:/etc/nginx/sites-enabled# cat jenkins.trycloud.co.in
+
+
+root@ip-172-31-94-216:/etc/nginx/sites-enabled# cat /etc/nginx/sites-enabled/jenkins.trycloud.co.in
 server {
   server_name jenkins.trycloud.co.in www.jenkins.trycloud.co.in;
   root /var/www/jenkins.trycloud.co.in/html;
@@ -47,5 +42,4 @@ server {
 
 
 
-
-}root@ip-172-31-94-216:/etc/nginx/sites-enabled# 
+--------------------------------------------------------------------------------
